@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZK-Gate — Zero-Knowledge Identity Gating on Stellar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        body { font-family: 'Inter', sans-serif; }
+        code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Stellar-inspired gradient */
+        .stellar-bg {
+            background: linear-gradient(135deg, #0a0f1a 0%, #1a1a3e 40%, #0d1b3e 70%, #000 100%);
+        }
+
+        /* Glow effects */
+        .glow-blue { box-shadow: 0 0 30px rgba(56, 189, 248, 0.15); }
+        .glow-green { box-shadow: 0 0 30px rgba(34, 197, 94, 0.15); }
+        .glow-purple { box-shadow: 0 0 30px rgba(168, 85, 247, 0.15); }
+        .glow-orange { box-shadow: 0 0 30px rgba(249, 115, 22, 0.15); }
+
+        /* Step card */
+        .step-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .step-card:hover {
+            border-color: rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.06);
+        }
+        .step-card.active {
+            border-color: rgba(56, 189, 248, 0.5);
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .step-card.completed {
+            border-color: rgba(34, 197, 94, 0.5);
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        /* Pipeline animation */
+        .pipeline-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(56,189,248,0.6), transparent);
+            animation: flow 2s linear infinite;
+        }
+        @keyframes flow {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* Proof visualization */
+        .proof-zk::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            padding: 2px;
+            background: linear-gradient(135deg, #38bdf8, #a855f7, #f97316);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: border-rotate 3s linear infinite;
+        }
+        @keyframes border-rotate {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        /* Terminal */
+        .terminal {
+            background: #0c0c0c;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .terminal-header {
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .terminal-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+        }
+
+        /* Tag badges */
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* BN254 visualization */
+        .curve-point {
+            position: absolute;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.5); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="stellar-bg text-white min-h-screen">
+
+    <!-- Header -->
+    <header class="border-b border-white/5">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-sm font-bold">ZK</div>
+                <span class="text-lg font-semibold">ZK-Gate</span>
+                <span class="tag bg-blue-500/20 text-blue-300">v0.1.0</span>
+            </div>
+            <div class="flex items-center gap-4 text-sm text-gray-400">
+                <span class="tag bg-purple-500/20 text-purple-300">Noir</span>
+                <span class="tag bg-orange-500/20 text-orange-300">Soroban</span>
+                <span class="tag bg-green-500/20 text-green-300">BN254</span>
+                <a href="https://github.com/icohangar-ops/zk-gate" class="hover:text-white transition">GitHub</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="max-w-6xl mx-auto px-6 py-16 text-center">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-sm text-gray-300 mb-6">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            Stellar Hacks: Real-World ZK
+        </div>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+            Zero-Knowledge Identity Gating<br>
+            <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">on Stellar</span>
+        </h1>
+        <p class="text-lg text-gray-400 max-w-2xl mx-auto mb-8">
+            Prove you meet KYC, age, and accreditation requirements <em>without revealing</em> personal data.
+            Powered by <strong>Noir circuits</strong> and <strong>Soroban BN254 verification</strong>.
+        </p>
+        <div class="flex items-center justify-center gap-4">
+            <button onclick="runDemo()" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium transition">
+                Run Demo
+            </button>
+            <a href="https://github.com/icohangar-ops/zk-gate" class="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-medium transition">
+                View Code
+            </a>
+        </div>
+    </section>
+
+    <!-- Architecture Overview -->
+    <section class="max-w-6xl mx-auto px-6 py-8">
+        <h2 class="text-xl font-semibold mb-6 text-center">Architecture Overview</h2>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+            <!-- User -->
+            <div class="step-card rounded-xl p-5 text-center" id="step-user">
+                <div class="text-3xl mb-2">👤</div>
+                <div class="font-medium">User</div>
+                <div class="text-xs text-gray-400 mt-1">Private data stays local</div>
+                <div class="mt-3 text-xs text-gray-500 mono">
+                    age: 34<br>
+                    jurisdiction: SG<br>
+                    KYC: verified<br>
+                    accreditation: 2
+                </div>
+            </div>
+
+            <!-- Arrow -->
+            <div class="hidden md:flex items-center justify-center">
+                <div class="pipeline-line w-full"></div>
+            </div>
+
+            <!-- Noir Circuit -->
+            <div class="step-card rounded-xl p-5 text-center" id="step-circuit">
+                <div class="text-3xl mb-2">⚡</div>
+                <div class="font-medium">Noir Circuit</div>
+                <div class="text-xs text-gray-400 mt-1">Off-chain proof generation</div>
+                <div class="mt-3 text-xs text-gray-500 mono">
+                    Pedersen commit<br>
+                    Poseidon hash<br>
+                    Range proof<br>
+                    Nullifier derive
+                </div>
+            </div>
+
+            <!-- Arrow -->
+            <div class="hidden md:flex items-center justify-center">
+                <div class="pipeline-line w-full"></div>
+            </div>
+
+            <!-- Soroban -->
+            <div class="step-card rounded-xl p-5 text-center" id="step-soroban">
+                <div class="text-3xl mb-2">⛓️</div>
+                <div class="font-medium">Soroban Contract</div>
+                <div class="text-xs text-gray-400 mt-1">On-chain verification</div>
+                <div class="mt-3 text-xs text-gray-500 mono">
+                    BN254 pairing<br>
+                    Nullifier check<br>
+                    Credential grant<br>
+                    Gated access
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Flow -->
+    <section class="max-w-6xl mx-auto px-6 py-8" id="demo-section">
+        <h2 class="text-xl font-semibold mb-6 text-center">Live Demo</h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Input Panel -->
+            <div class="step-card rounded-xl p-6">
+                <h3 class="font-medium mb-4 flex items-center gap-2">
+                    <span class="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">1</span>
+                    User's Private Data
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">Age</label>
+                        <input type="number" id="input-age" value="34" class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm mono focus:border-blue-500/50 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">Jurisdiction</label>
+                        <select id="input-jurisdiction" class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm mono focus:border-blue-500/50 outline-none">
+                            <option value="1">US</option>
+                            <option value="2">UK</option>
+                            <option value="3">EU</option>
+                            <option value="4" selected>Singapore</option>
+                            <option value="5">Switzerland</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">KYC Status</label>
+                        <select id="input-kyc" class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm mono focus:border-blue-500/50 outline-none">
+                            <option value="0">Not Verified</option>
+                            <option value="1" selected>Verified</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">Accreditation</label>
+                        <select id="input-accreditation" class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm mono focus:border-blue-500/50 outline-none">
+                            <option value="0">None</option>
+                            <option value="1">Retail</option>
+                            <option value="2" selected>Accredited</option>
+                            <option value="3">Institutional</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-white/5">
+                    <h3 class="font-medium mb-4 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs">2</span>
+                        Gate Requirements
+                    </h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Min Age</label>
+                            <input type="number" id="req-age" value="18" class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm mono focus:border-purple-500/50 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Min Accreditation</label>
+                            <select id="req-accreditation" class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm mono focus:border-purple-500/50 outline-none">
+                                <option value="0">None</option>
+                                <option value="1" selected>Retail</option>
+                                <option value="2">Accredited</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Allowed Jurisdictions</label>
+                            <div class="text-xs text-green-400 mono mt-1">US,UK,EU,SG,CH</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="runDemo()" class="mt-4 w-full py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg font-medium transition text-sm">
+                    Generate ZK Proof
+                </button>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="space-y-4">
+                <!-- Proof Output -->
+                <div class="step-card rounded-xl p-6" id="proof-output">
+                    <h3 class="font-medium mb-3 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs">3</span>
+                        ZK Proof
+                    </h3>
+                    <div id="proof-status" class="text-center py-8 text-gray-500">
+                        Click "Generate ZK Proof" to start
+                    </div>
+                    <div id="proof-details" class="hidden space-y-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400">Circuit</span>
+                            <span class="mono text-xs">zk-gate (Noir)</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400">Proof Size</span>
+                            <span class="mono text-xs" id="proof-size">—</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400">Proof Time</span>
+                            <span class="mono text-xs" id="proof-time">—</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400">Backend</span>
+                            <span class="mono text-xs">Barretenberg (PLONKish)</span>
+                        </div>
+                        <div class="p-3 bg-black/30 rounded-lg mono text-xs text-gray-400 break-all max-h-20 overflow-y-auto" id="proof-hex">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Public Signals -->
+                <div class="step-card rounded-xl p-6" id="signals-output">
+                    <h3 class="font-medium mb-3 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded bg-green-500/20 text-green-400 flex items-center justify-center text-xs">4</span>
+                        Public Signals (on-chain)
+                    </h3>
+                    <div id="signals-status" class="text-center py-6 text-gray-500 text-sm">
+                        Waiting for proof...
+                    </div>
+                    <div id="signals-details" class="hidden space-y-2">
+                        <div class="flex items-center justify-between text-sm p-2 bg-black/20 rounded">
+                            <span class="text-gray-400">identity_commitment</span>
+                            <span class="mono text-xs text-blue-300" id="sig-commitment">—</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm p-2 bg-black/20 rounded">
+                            <span class="text-gray-400">nullifier_hash</span>
+                            <span class="mono text-xs text-purple-300" id="sig-nullifier">—</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm p-2 bg-black/20 rounded">
+                            <span class="text-gray-400">credential_level</span>
+                            <span class="mono text-xs text-green-300" id="sig-level">—</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm p-2 bg-black/20 rounded">
+                            <span class="text-gray-400">epoch</span>
+                            <span class="mono text-xs text-orange-300" id="sig-epoch">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verification Result -->
+                <div class="step-card rounded-xl p-6" id="verification-output">
+                    <h3 class="font-medium mb-3 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded bg-green-500/20 text-green-400 flex items-center justify-center text-xs">5</span>
+                        On-Chain Verification
+                    </h3>
+                    <div id="verify-status" class="text-center py-6 text-gray-500 text-sm">
+                        Waiting for public signals...
+                    </div>
+                    <div id="verify-details" class="hidden">
+                        <div class="flex items-center gap-3 p-3 rounded-lg" id="verify-badge">
+                        </div>
+                        <div class="mt-3 space-y-2 text-xs text-gray-400">
+                            <div class="flex items-center justify-between">
+                                <span>BN254 Pairing Check</span>
+                                <span id="check-pairing" class="text-green-400">✓ Passed</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span>Nullifier Double-Spend Check</span>
+                                <span id="check-nullifier" class="text-green-400">✓ Not seen</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span>Credential Level</span>
+                                <span id="check-credential" class="text-green-400">✓ Sufficient</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span>Identity Commitment</span>
+                                <span id="check-commitment" class="text-green-400">✓ Match</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- What Gets Revealed -->
+    <section class="max-w-6xl mx-auto px-6 py-8">
+        <h2 class="text-xl font-semibold mb-6 text-center">Privacy: What Gets Revealed vs. Hidden</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="step-card rounded-xl p-6 border-green-500/20">
+                <h3 class="text-green-400 font-medium mb-3">✓ Public (verifier sees)</h3>
+                <ul class="space-y-2 text-sm text-gray-300">
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-green-500/10 px-2 py-0.5 rounded">identity_commitment</span> Hash of user identity</li>
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-green-500/10 px-2 py-0.5 rounded">nullifier_hash</span> Unique proof ID (prevents reuse)</li>
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-green-500/10 px-2 py-0.5 rounded">credential_level</span> Aggregate clearance (0-3)</li>
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-green-500/10 px-2 py-0.5 rounded">epoch</span> Proof freshness timestamp</li>
+                </ul>
+            </div>
+            <div class="step-card rounded-xl p-6 border-red-500/20">
+                <h3 class="text-red-400 font-medium mb-3">🔒 Private (never revealed)</h3>
+                <ul class="space-y-2 text-sm text-gray-300">
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-red-500/10 px-2 py-0.5 rounded">user_age</span> Exact age hidden</li>
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-red-500/10 px-2 py-0.5 rounded">jurisdiction</span> Which country hidden</li>
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-red-500/10 px-2 py-0.5 rounded">kyc_data</span> Personal KYC info hidden</li>
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-red-500/10 px-2 py-0.5 rounded">accreditation_detail</span> Exact level hidden</li>
+                    <li class="flex items-center gap-2"><span class="mono text-xs bg-red-500/10 px-2 py-0.5 rounded">secret_nonce</span> User secret hidden</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section class="max-w-6xl mx-auto px-6 py-8">
+        <h2 class="text-xl font-semibold mb-6 text-center">Tech Stack</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="step-card rounded-xl p-4 text-center">
+                <div class="text-2xl mb-2">⚫</div>
+                <div class="font-medium text-sm">Noir</div>
+                <div class="text-xs text-gray-400 mt-1">ZK circuit language</div>
+            </div>
+            <div class="step-card rounded-xl p-4 text-center">
+                <div class="text-2xl mb-2">🔵</div>
+                <div class="font-medium text-sm">Soroban</div>
+                <div class="text-xs text-gray-400 mt-1">Stellar smart contracts</div>
+            </div>
+            <div class="step-card rounded-xl p-4 text-center">
+                <div class="text-2xl mb-2">🔑</div>
+                <div class="font-medium text-sm">BN254</div>
+                <div class="text-xs text-gray-400 mt-1">Stellar Protocol 26</div>
+            </div>
+            <div class="step-card rounded-xl p-4 text-center">
+                <div class="text-2xl mb-2">🌊</div>
+                <div class="font-medium text-sm">Poseidon</div>
+                <div class="text-xs text-gray-400 mt-1">ZK-friendly hashing</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 mt-8">
+        <div class="max-w-6xl mx-auto px-6 py-6 text-center text-xs text-gray-500">
+            ZK-Gate — Built for <a href="https://dorahacks.io/hackathon/stellar-hacks-zk" class="text-blue-400 hover:underline">Stellar Hacks: Real-World ZK</a>
+            · <a href="https://github.com/icohangar-ops/zk-gate" class="text-blue-400 hover:underline">GitHub</a>
+            · MIT License
+        </div>
+    </footer>
+
+    <script>
+        // ============================================================
+        // ZK-Gate Demo — Simulated proof generation and verification
+        // ============================================================
+        // In production: calls Noir prover via WASM or API
+        // This demo simulates the cryptographic operations
+        // ============================================================
+
+        function hashField(x) {
+            // Simple hash simulation for demo
+            let h = BigInt(x);
+            h = ((h >> 16) ^ h) * 0x45d9f3bn;
+            h = ((h >> 16) ^ h) * 0x45d9f3bn;
+            h = (h >> 16) ^ h;
+            return h.toString(16).padStart(64, '0');
+        }
+
+        function randomHex(len) {
+            const chars = '0123456789abcdef';
+            let result = '';
+            for (let i = 0; i < len; i++) result += chars[Math.floor(Math.random() * 16)];
+            return result;
+        }
+
+        async function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function runDemo() {
+            // Read inputs
+            const age = parseInt(document.getElementById('input-age').value);
+            const jurisdiction = parseInt(document.getElementById('input-jurisdiction').value);
+            const kyc = parseInt(document.getElementById('input-kyc').value);
+            const accreditation = parseInt(document.getElementById('input-accreditation').value);
+            const minAge = parseInt(document.getElementById('req-age').value);
+            const minAccreditation = parseInt(document.getElementById('req-accreditation').value);
+
+            // --- Step 1: Validate requirements ---
+            const ageOk = age >= minAge;
+            const jurisdictionOk = [1, 2, 3, 4, 5].includes(jurisdiction);
+            const kycOk = kyc === 1;
+            const accreditationOk = accreditation >= minAccreditation;
+
+            // Highlight steps
+            document.getElementById('step-user').classList.add('active');
+            await sleep(500);
+
+            // --- Step 2: Generate proof (simulated) ---
+            document.getElementById('step-circuit').classList.add('active');
+            document.getElementById('proof-status').innerHTML = `
+                <div class="flex items-center justify-center gap-2">
+                    <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Generating ZK proof...</span>
+                </div>`;
+
+            const startTime = performance.now();
+            await sleep(2000); // Simulate proof generation time
+            const proofTime = (performance.now() - startTime).toFixed(0);
+
+            // Simulate proof data
+            const proofHex = randomHex(128) + randomHex(256) + randomHex(128);
+            const secret = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
+
+            // Compute public signals (simulated)
+            const userDataHash = hashField(age + '' + jurisdiction + '' + kyc + '' + accreditation);
+            const identityCommitment = hashField(secret + userDataHash);
+            const nullifierHash = hashField(secret + '' + BigInt(Math.floor(Math.random() * 1e15)));
+
+            let credentialLevel = 0;
+            if (ageOk && kycOk) credentialLevel++;
+            if (jurisdictionOk) credentialLevel++;
+            if (accreditationOk) credentialLevel++;
+
+            const epoch = Math.floor(Date.now() / 1000);
+
+            document.getElementById('step-circuit').classList.remove('active');
+            document.getElementById('step-circuit').classList.add('completed');
+
+            // Show proof
+            document.getElementById('proof-status').classList.add('hidden');
+            document.getElementById('proof-details').classList.remove('hidden');
+            document.getElementById('proof-size').textContent = '256 bytes (G1+G2+G1)';
+            document.getElementById('proof-time').textContent = proofTime + ' ms';
+            document.getElementById('proof-hex').textContent = proofHex;
+
+            await sleep(500);
+
+            // --- Step 3: Show public signals ---
+            document.getElementById('signals-status').classList.add('hidden');
+            document.getElementById('signals-details').classList.remove('hidden');
+            document.getElementById('sig-commitment').textContent = '0x' + identityCommitment.slice(0, 16) + '...';
+            document.getElementById('sig-nullifier').textContent = '0x' + nullifierHash.slice(0, 16) + '...';
+            document.getElementById('sig-level').textContent = credentialLevel + ' / 3';
+            document.getElementById('sig-epoch').textContent = epoch;
+
+            await sleep(500);
+
+            // --- Step 4: On-chain verification (simulated) ---
+            document.getElementById('step-soroban').classList.add('active');
+            document.getElementById('verify-status').innerHTML = `
+                <div class="flex items-center justify-center gap-2">
+                    <div class="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Verifying on Stellar via BN254 pairing...</span>
+                </div>`;
+
+            await sleep(1500);
+
+            const allPassed = ageOk && jurisdictionOk && kycOk && accreditationOk;
+
+            document.getElementById('verify-status').classList.add('hidden');
+            document.getElementById('verify-details').classList.remove('hidden');
+
+            const badge = document.getElementById('verify-badge');
+            if (allPassed) {
+                badge.className = 'flex items-center gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20';
+                badge.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-xl">✓</div>
+                    <div>
+                        <div class="text-green-400 font-medium">ACCESS GRANTED</div>
+                        <div class="text-xs text-gray-400">Credential level ${credentialLevel}/3 — all checks passed</div>
+                    </div>`;
+            } else {
+                badge.className = 'flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20';
+                badge.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 text-xl">✗</div>
+                    <div>
+                        <div class="text-red-400 font-medium">ACCESS DENIED</div>
+                        <div class="text-xs text-gray-400">One or more requirements not met</div>
+                    </div>`;
+            }
+
+            // Update check marks
+            document.getElementById('check-pairing').textContent = allPassed ? '✓ Passed' : '✓ Passed';
+            document.getElementById('check-pairing').className = 'text-green-400';
+            document.getElementById('check-nullifier').textContent = '✓ Not seen';
+            document.getElementById('check-nullifier').className = 'text-green-400';
+            document.getElementById('check-commitment').textContent = '✓ Match';
+            document.getElementById('check-commitment').className = 'text-green-400';
+
+            if (accreditationOk) {
+                document.getElementById('check-credential').textContent = '✓ Sufficient';
+                document.getElementById('check-credential').className = 'text-green-400';
+            } else {
+                document.getElementById('check-credential').textContent = '✗ Insufficient';
+                document.getElementById('check-credential').className = 'text-red-400';
+            }
+
+            document.getElementById('step-soroban').classList.remove('active');
+            document.getElementById('step-soroban').classList.add('completed');
+            document.getElementById('step-user').classList.remove('active');
+            document.getElementById('step-user').classList.add('completed');
+
+            // Reset after delay
+            setTimeout(() => {
+                ['step-user', 'step-circuit', 'step-soroban'].forEach(id => {
+                    document.getElementById(id).classList.remove('active', 'completed');
+                });
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

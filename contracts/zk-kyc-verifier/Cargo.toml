@@ -1,0 +1,19 @@
+[package]
+name = "zk-kyc-verifier"
+version = "0.1.0"
+edition = "2021"
+authors = ["cubiczan <cubiczan@icohangar.dev>"]
+description = "ZK-Gate on-chain verifier — verifies Noir proofs using BN254 pairing checks on Stellar"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+testutils = ["soroban-sdk/testutils"]
+
+[dependencies]
+soroban-sdk = "22.0.0"
+
+[dev-dependencies]
+soroban-sdk = { version = "22.0.0", features = ["testutils"] }

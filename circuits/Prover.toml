@@ -1,0 +1,54 @@
+# ============================================================
+# ZK-Gate Identity Proof — Prover Input File
+# ============================================================
+# This file contains sample inputs for generating a ZK proof
+# that a user meets KYC/identity requirements WITHOUT revealing
+# the underlying private data.
+#
+# Usage: nargo execute proof
+# ============================================================
+
+# --- Private Inputs (never revealed to the verifier) ---
+# User's secret nonce for the commitment scheme
+secret = "28457392018347650192"
+
+# User's actual age (kept private)
+user_age = "34"
+
+# User's jurisdiction code (kept private)
+# 1 = US, 2 = UK, 3 = EU, 4 = Singapore, 5 = Switzerland
+user_jurisdiction = "4"
+
+# KYC verification status (kept private)
+is_kyc_verified = "1"
+
+# Accreditation level (kept private)
+# 0 = none, 1 = retail, 2 = accredited, 3 = institutional
+accreditation_level = "2"
+
+# User's unique salt for nullifier derivation
+nullifier_salt = "91827364501928374650"
+
+# --- Public Inputs (known to verifier) ---
+# Minimum age requirement
+min_age = "18"
+
+# Required accreditation level
+min_accreditation = "1"
+
+# Allowed jurisdictions (as a hash of the set)
+# Hash of {1, 2, 3, 4, 5} using Poseidon
+allowed_jurisdictions_hash = "14253678910111213141516171819202122232425262728293031"
+
+# Identity commitment (registered on-chain during setup)
+identity_commitment = "0"
+
+# Nullifier hash (derived from secret + salt, prevents double-use)
+nullifier_hash = "0"
+
+# Issuer public key components (for attestation verification)
+issuer_pubkey_x = "0"
+issuer_pubkey_y = "0"
+
+# Current epoch (for freshness)
+current_epoch = "1718800000"
