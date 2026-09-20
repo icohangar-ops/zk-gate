@@ -80,13 +80,13 @@ zk-gate/
 
 ### Key Design Decisions
 
-**Noir over Circom/RISC Zero:** Stellar Protocol 25/26 added native BN254 elliptic-curve host functions (ec_add_bn256, ec_mul_bn256, ec_pairing_check_bn256) specifically optimized for Noir proof verification. This makes on-chain verification meaningfully cheaper compared to other proof systems.
+**Noir over Circom/RISC Zero:** Stellar Protocol 25/26 added native BN254 elliptic-curve host functions (ec_add_bn256, ec_mul_bn256, ec_pairing_check_bn256) specifically optimized for Noir proof verification. This makes on-chain verification meaningfully cheaper compared to other proof systems. Realized in the verifier's proof check (`contracts/zk-kyc-verifier/src/lib.rs`).
 
-**Pedersen + Poseidon over SHA256:** ZK-friendly primitives that enable efficient proof generation. Pedersen commitments bind user identity; Poseidon hashes derive nullifiers and attestation data.
+**Pedersen + Poseidon over SHA256:** ZK-friendly primitives that enable efficient proof generation. Pedersen commitments bind user identity; Poseidon hashes derive nullifiers and attestation data (`circuits/src/main.nr`, `circuits/src/lib.nr`).
 
-**Nullifier-based double-spend prevention:** Each proof produces a deterministic nullifier from the user's secret + salt. The contract tracks spent nullifiers — reusing a proof is cryptographically impossible.
+**Nullifier-based double-spend prevention:** Each proof produces a deterministic nullifier from the user's secret + salt. The contract tracks spent nullifiers — reusing a proof is cryptographically impossible (`contracts/zk-kyc-verifier/src/lib.rs`).
 
-**Credential levels over binary pass/fail:** The circuit outputs a 0-3 credential level, enabling granular gating (e.g., retail vs. accredited vs. institutional access) without revealing which specific requirements the user met.
+**Credential levels over binary pass/fail:** The circuit outputs a 0-3 credential level, enabling granular gating (e.g., retail vs. accredited vs. institutional access) without revealing which specific requirements the user met (`circuits/src/main.nr`).
 
 ## Quick Start
 
