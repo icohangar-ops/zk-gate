@@ -6,7 +6,7 @@
 [![DoraHacks](https://img.shields.io/badge/DoraHacks-Stellar%20Hacks-green)](https://dorahacks.io/hackathon/stellar-hacks-zk)
 
 > **Prove you meet identity requirements without revealing personal data.**
-> Noir circuits generate ZK proofs off-chain; Soroban contracts verify them on-chain using Stellar Protocol 26's native BN254 host functions.
+> Noir circuits generate ZK proofs off-chain (`circuits/src/main.nr`); Soroban contracts verify them on-chain using Stellar Protocol 26's native BN254 host functions (`contracts/zk-kyc-verifier/src/lib.rs`).
 
 ## The Problem
 
